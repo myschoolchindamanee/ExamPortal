@@ -10,6 +10,8 @@
       --primary:#222c65;
       --card:#f8faff;
       --bg:#f3f6f9;
+      --success:#28a745;
+      --warning:#ffc107;
     }
 
     body{
@@ -105,15 +107,49 @@
       transition: background 0.3s ease, transform 0.2s ease;
     }
     button:hover{ background:#1b2455; transform: translateY(-2px); }
+    
+    button.secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    button.secondary:hover {
+      background: #e0e0e0;
+    }
 
     .muted{color:#666;font-size:13px}
     .row{display:flex;gap:12px;flex-wrap:wrap}
     .small{max-width:260px; flex: 1;}
     ul.file-list{list-style:none;padding-left:0;margin-top:10px}
     ul.file-list li{padding:8px 6px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
-    a.link{color:var(--primary);text-decoration:none}
+    a.link{color:var(--primary);text-decoration:none; cursor: pointer;}
+    a.link:hover{text-decoration:underline;}
     .right{margin-left:auto}
     .topbar{display:flex;gap:12px;align-items:center;justify-content:flex-end; flex-wrap: wrap;}
+    
+    .status-message {
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    
+    .status-success {
+      background-color: rgba(40, 167, 69, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+    
+    .status-error {
+      background-color: rgba(220, 53, 69, 0.1);
+      color: #dc3545;
+      border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+    
+    .status-info {
+      background-color: rgba(23, 162, 184, 0.1);
+      color: #17a2b8;
+      border: 1px solid rgba(23, 162, 184, 0.3);
+    }
 
     @media (max-width: 768px){
       header{flex-direction: column; align-items: flex-start;}
@@ -171,9 +207,47 @@
           <button onclick="signIn()">Sign in</button>
         </div>
       </div>
+      <div style="margin-top:12px; text-align: center;">
+        <a class="link" onclick="showResetPassword()">Forgot your password?</a>
+      </div>
       <div style="margin-top:8px" class="muted">
         Only <strong>@chindamanee.ac.th</strong> emails are accepted by this page.
       </div>
+    </div>
+
+    <!-- RESET PASSWORD CARD -->
+    <div class="card" id="reset-password-card" style="display:none">
+      <h3>Reset Password</h3>
+      <div class="muted">Enter your email address and we'll send you a password reset link.</div>
+      <label>Email</label>
+      <input id="reset-email" type="email" placeholder="name@chindamanee.ac.th" />
+      <div class="row" style="margin-top:10px">
+        <div class="small">
+          <button onclick="sendResetLink()">Send Reset Link</button>
+        </div>
+        <div class="small">
+          <button class="secondary" onclick="cancelReset()">Cancel</button>
+        </div>
+      </div>
+      <div id="reset-status" class="status-message" style="display:none"></div>
+    </div>
+
+    <!-- UPDATE PASSWORD CARD (for after clicking reset link) -->
+    <div class="card" id="update-password-card" style="display:none">
+      <h3>Update Password</h3>
+      <label>New Password</label>
+      <input id="new-password" type="password" placeholder="Enter new password (min 6 chars)" />
+      <label>Confirm Password</label>
+      <input id="confirm-password" type="password" placeholder="Confirm new password" />
+      <div class="row" style="margin-top:10px">
+        <div class="small">
+          <button onclick="updatePassword()">Update Password</button>
+        </div>
+        <div class="small">
+          <button class="secondary" onclick="cancelUpdate()">Cancel</button>
+        </div>
+      </div>
+      <div id="update-status" class="status-message" style="display:none"></div>
     </div>
 
     <!-- SESSION INFO + Sign Out -->
@@ -233,18 +307,31 @@
     const supabase = createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
     const authCard=document.getElementById('auth-card');
+    const resetPasswordCard=document.getElementById('reset-password-card');
+    const updatePasswordCard=document.getElementById('update-password-card');
     const uploadCard=document.getElementById('upload-card');
     const adminCard=document.getElementById('admin-card');
     const sessionCard=document.getElementById('session-card');
     const userEmailEl=document.getElementById('user-email');
     const userIdEl=document.getElementById('user-id');
     const uploadStatusEl=document.getElementById('upload-status');
+    const resetStatusEl=document.getElementById('reset-status');
+    const updateStatusEl=document.getElementById('update-status');
     const fileListEl=document.getElementById('file-list');
     const bgShapes = document.querySelectorAll('.bg-shape');
     const welcomeBanner = document.querySelector('.welcome-banner');
     let currentUser=null;
 
     (async function init(){
+      // Check if we're in a password recovery flow
+      const urlParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = urlParams.get('type');
+      const access_token = urlParams.get('access_token');
+      
+      if (type === 'recovery' && access_token) {
+        showUpdatePassword();
+      }
+      
       const { data }=await supabase.auth.getSession();
       currentUser=data?.session?.user??null;
       updateUI();
@@ -269,26 +356,180 @@
     });
 
     function validateSchoolEmail(email){return typeof email==='string' && email.toLowerCase().endsWith('@chindamanee.ac.th');}
-    async function signUp(){const email=document.getElementById('email').value.trim(); const password=document.getElementById('password').value;
+    
+    async function signUp(){
+      const email=document.getElementById('email').value.trim(); 
+      const password=document.getElementById('password').value;
       if(!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
       if(!password || password.length<6) return alert('Password must be at least 6 characters.');
-      try{const { error }=await supabase.auth.signUp({email,password}); if(error) throw error; alert('Signup successful — check your email for a confirmation link.');}catch(err){alert('Sign up error: '+(err.message||err));}
+      try{
+        const { error }=await supabase.auth.signUp({email,password}); 
+        if(error) throw error; 
+        alert('Signup successful — check your email for a confirmation link.');
+      }catch(err){
+        alert('Sign up error: '+(err.message||err));
+      }
     }
-    async function signIn(){const email=document.getElementById('email').value.trim(); const password=document.getElementById('password').value;
+    
+    async function signIn(){
+      const email=document.getElementById('email').value.trim(); 
+      const password=document.getElementById('password').value;
       if(!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
       if(!password) return alert('Enter your password.');
-      try{const { error }=await supabase.auth.signInWithPassword({email,password}); if(error) throw error;}catch(err){alert('Sign in error: '+(err.message||err));}
+      try{
+        const { error }=await supabase.auth.signInWithPassword({email,password}); 
+        if(error) throw error;
+      }catch(err){
+        alert('Sign in error: '+(err.message||err));
+      }
     }
-    async function signOut(){await supabase.auth.signOut(); currentUser=null; updateUI();}
+    
+    async function signOut(){
+      await supabase.auth.signOut(); 
+      currentUser=null; 
+      updateUI();
+    }
+
+    function showResetPassword() {
+      authCard.style.display = 'none';
+      resetPasswordCard.style.display = 'block';
+      // Pre-fill with email if available
+      const email = document.getElementById('email').value.trim();
+      if (email) {
+        document.getElementById('reset-email').value = email;
+      }
+    }
+    
+    function cancelReset() {
+      resetPasswordCard.style.display = 'none';
+      resetStatusEl.style.display = 'none';
+      authCard.style.display = 'block';
+    }
+    
+    async function sendResetLink() {
+      const email = document.getElementById('reset-email').value.trim();
+      
+      if(!validateSchoolEmail(email)) {
+        showStatus(resetStatusEl, 'Only @chindamanee.ac.th emails are allowed.', 'error');
+        return;
+      }
+      
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + window.location.pathname,
+        });
+        
+        if (error) throw error;
+        
+        showStatus(resetStatusEl, 'Password reset link sent to your email. Please check your inbox.', 'success');
+        
+        // Clear the form after successful submission
+        document.getElementById('reset-email').value = '';
+        
+        // Hide the reset form after a delay
+        setTimeout(() => {
+          resetPasswordCard.style.display = 'none';
+          resetStatusEl.style.display = 'none';
+          authCard.style.display = 'block';
+        }, 5000);
+        
+      } catch (error) {
+        showStatus(resetStatusEl, 'Error sending reset link: ' + error.message, 'error');
+      }
+    }
+    
+    function showUpdatePassword() {
+      // Hide all other cards
+      authCard.style.display = 'none';
+      resetPasswordCard.style.display = 'none';
+      uploadCard.style.display = 'none';
+      adminCard.style.display = 'none';
+      sessionCard.style.display = 'none';
+      
+      // Show update password card
+      updatePasswordCard.style.display = 'block';
+    }
+    
+    function cancelUpdate() {
+      updatePasswordCard.style.display = 'none';
+      updateStatusEl.style.display = 'none';
+      authCard.style.display = 'block';
+      
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    async function updatePassword() {
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      if (!newPassword || newPassword.length < 6) {
+        showStatus(updateStatusEl, 'Password must be at least 6 characters.', 'error');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        showStatus(updateStatusEl, 'Passwords do not match.', 'error');
+        return;
+      }
+      
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+        
+        if (error) throw error;
+        
+        showStatus(updateStatusEl, 'Password updated successfully! You can now sign in with your new password.', 'success');
+        
+        // Clear the form
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+        
+        // Redirect to sign in after a delay
+        setTimeout(() => {
+          updatePasswordCard.style.display = 'none';
+          updateStatusEl.style.display = 'none';
+          authCard.style.display = 'block';
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }, 3000);
+        
+      } catch (error) {
+        showStatus(updateStatusEl, 'Error updating password: ' + error.message, 'error');
+      }
+    }
+    
+    function showStatus(element, message, type) {
+      element.textContent = message;
+      element.className = 'status-message';
+      element.classList.add(`status-${type}`);
+      element.style.display = 'block';
+    }
 
     function updateUI(){
       if(currentUser){
-        authCard.style.display='none'; uploadCard.style.display='block'; sessionCard.style.display='block';
-        userEmailEl.textContent=currentUser.email; userIdEl.textContent=`UID: ${currentUser.id}`;
+        authCard.style.display='none'; 
+        resetPasswordCard.style.display='none';
+        updatePasswordCard.style.display='none';
+        uploadCard.style.display='block'; 
+        sessionCard.style.display='block';
+        userEmailEl.textContent=currentUser.email; 
+        userIdEl.textContent=`UID: ${currentUser.id}`;
         adminCard.style.display=ADMINS.includes(currentUser.email.toLowerCase())?'block':'none';
       }else{
-        authCard.style.display='block'; uploadCard.style.display='none'; adminCard.style.display='none'; sessionCard.style.display='none';
-        userEmailEl.textContent='--'; userIdEl.textContent='UID: --';
+        // Only show auth card if we're not in the middle of a password reset flow
+        const urlParams = new URLSearchParams(window.location.hash.substring(1));
+        const type = urlParams.get('type');
+        if (type !== 'recovery') {
+          authCard.style.display='block'; 
+        }
+        resetPasswordCard.style.display='none';
+        updatePasswordCard.style.display='none';
+        uploadCard.style.display='none'; 
+        adminCard.style.display='none'; 
+        sessionCard.style.display='none';
+        userEmailEl.textContent='--'; 
+        userIdEl.textContent='UID: --';
       }
     }
 
@@ -329,6 +570,8 @@
     }
 
     window.signUp=signUp; window.signIn=signIn; window.signOut=signOut; window.uploadFile=uploadFile; window.listFiles=listFiles;
+    window.showResetPassword=showResetPassword; window.cancelReset=cancelReset; window.sendResetLink=sendResetLink;
+    window.cancelUpdate=cancelUpdate; window.updatePassword=updatePassword;
   </script>
 </body>
 </html>
