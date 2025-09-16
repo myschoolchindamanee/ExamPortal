@@ -6,25 +6,123 @@
   <title>Chindamanee School — Exam Portal</title>
 
   <style>
-    :root{--primary:#1769aa;--card:#fff;--bg:#f3f6f9}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;background:var(--bg);color:#111}
-    header{display:flex;gap:12px;align-items:center;padding:20px;max-width:960px;margin:18px auto}
-    img.logo{width:86px;height:auto;border-radius:8px}
-    h1{font-size:20px;margin:0}
+    :root{
+      --primary:#222c65;
+      --card:#f8faff;
+      --bg:#f3f6f9;
+    }
+
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      margin:0;
+      background:linear-gradient(135deg, #f3f6f9 0%, #e8eef7 100%);
+      color:#111;
+    }
+
+    /* Header with school color */
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding:20px;
+      max-width:960px;
+      margin:18px auto;
+      background-color: var(--primary);
+      color: #fff;
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1, header .muted {
+      color: #fff;
+      margin: 0;
+    }
+
+    img.logo {
+      width:86px;
+      height:auto;
+      border-radius:8px;
+      background:#fff;
+      padding:4px;
+    }
+
     .container{max-width:960px;margin:0 auto;padding:12px}
-    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(20,30,40,0.06);margin-bottom:14px}
+
+    /* Card styling with soft tint and hover lift */
+    .card{
+      background: var(--card);
+      border-radius:12px;
+      padding:18px;
+      box-shadow:0 6px 18px rgba(20,30,40,0.06);
+      margin-bottom:14px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover{
+      transform: translateY(-5px);
+      box-shadow:0 12px 24px rgba(20,30,40,0.12);
+    }
+
     label{display:block;margin-top:10px;font-size:13px;color:#333}
-    input[type="text"],input[type="email"],input[type="password"],select{width:100%;padding:9px;border:1px solid #ddd;border-radius:8px;margin-top:6px;box-sizing:border-box}
+    input[type="text"],input[type="email"],input[type="password"],select{
+      width:100%;
+      padding:9px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      margin-top:6px;
+      box-sizing:border-box;
+    }
     input[type="file"]{margin-top:8px}
-    button{background:var(--primary);color:#fff;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;margin-top:12px}
+
+    /* Buttons school color with hover effect */
+    button{
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      padding:10px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      margin-top:12px;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    button:hover{
+      background:#1b2455; /* slightly darker shade */
+      transform: translateY(-2px);
+    }
+
     .muted{color:#666;font-size:13px}
     .row{display:flex;gap:12px;flex-wrap:wrap}
-    .small{max-width:260px}
+    .small{max-width:260px; flex: 1;}
     ul.file-list{list-style:none;padding-left:0;margin-top:10px}
-    ul.file-list li{padding:8px 6px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+    ul.file-list li{padding:8px 6px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
     a.link{color:var(--primary);text-decoration:none}
     .right{margin-left:auto}
-    .topbar{display:flex;gap:12px;align-items:center;justify-content:flex-end}
+    .topbar{display:flex;gap:12px;align-items:center;justify-content:flex-end; flex-wrap: wrap;}
+
+    /* Responsive adjustments */
+    @media (max-width: 768px){
+      header{
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .row{
+        flex-direction: column;
+      }
+      .small{
+        max-width: 100%;
+      }
+      .topbar{
+        justify-content: flex-start;
+      }
+      ul.file-list li{
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      ul.file-list li div{
+        margin-top:6px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -102,7 +200,6 @@
       <div class="muted" style="margin-top:8px">If downloads fail, make the bucket public in Supabase Storage settings (simpler for printing).</div>
     </div>
 
-    <!-- Simple footer -->
     <div style="margin-top:8px;font-size:13px;color:#666">If something breaks — open Browser Console (F12) and tell me the exact error and I'll help.</div>
   </div>
 
@@ -110,17 +207,13 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    // ---------- CONFIG (change these only if you want) ----------
     const SUPABASE_URL = 'https://vydaeemptmxxixwwoepj.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5ZGFlZW1wdG14eGl4d3dvZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5ODUzMzUsImV4cCI6MjA3MzU2MTMzNX0.46QAkga8WetD8BWNnYq1x-SABBtdv0pbCEtMCuR3x7c';
-    const BUCKET = 'ExamPortal'; // exactly the bucket name you created
-    // Add admin emails here (who can see the Admin UI). Change as you like.
+    const BUCKET = 'ExamPortal';
     const ADMINS = ['admin@chindamanee.ac.th', 'principal@chindamanee.ac.th'];
 
-    // ---------- Init supabase ----------
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // UI elements
     const authCard = document.getElementById('auth-card');
     const uploadCard = document.getElementById('upload-card');
     const adminCard = document.getElementById('admin-card');
@@ -130,22 +223,19 @@
     const uploadStatusEl = document.getElementById('upload-status');
     const fileListEl = document.getElementById('file-list');
 
-    // Keep current user
     let currentUser = null;
 
-    // On load: check session and subscribe to auth changes
     ;(async function init() {
+      alert("👋 Hi Chindamanee Teachers!\nPlease Sign up or Sign in before uploading exam paper.");
       const { data } = await supabase.auth.getSession();
       currentUser = data?.session?.user ?? null;
       updateUI();
-
       supabase.auth.onAuthStateChange((_event, session) => {
         currentUser = session?.user ?? null;
         updateUI();
       });
     })();
 
-    // --------------- AUTH ----------------
     function validateSchoolEmail(email) {
       return typeof email === 'string' && email.toLowerCase().endsWith('@chindamanee.ac.th');
     }
@@ -155,14 +245,12 @@
       const password = document.getElementById('password').value;
       if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
       if (!password || password.length < 6) return alert('Password must be at least 6 characters.');
-
       try {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         alert('Signup successful — check your email for a confirmation link (if enabled).');
       } catch (err) {
         alert('Sign up error: ' + (err.message || err));
-        console.error(err);
       }
     }
 
@@ -171,14 +259,11 @@
       const password = document.getElementById('password').value;
       if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
       if (!password) return alert('Enter your password.');
-
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // success: auth.onAuthStateChange will update UI
       } catch (err) {
         alert('Sign in error: ' + (err.message || err));
-        console.error(err);
       }
     }
 
@@ -188,7 +273,6 @@
       updateUI();
     }
 
-    // --------------- UI updates ----------------
     function updateUI() {
       if (currentUser) {
         authCard.style.display = 'none';
@@ -196,8 +280,6 @@
         sessionCard.style.display = 'block';
         userEmailEl.textContent = currentUser.email;
         userIdEl.textContent = `UID: ${currentUser.id}`;
-
-        // Only show admin if in ADMINS list
         if (ADMINS.includes(currentUser.email.toLowerCase())) {
           adminCard.style.display = 'block';
         } else {
@@ -208,12 +290,9 @@
         uploadCard.style.display = 'none';
         adminCard.style.display = 'none';
         sessionCard.style.display = 'none';
-        userEmailEl.textContent = '--';
-        userIdEl.textContent = 'UID: --';
       }
     }
 
-    // --------------- Upload ----------------
     function sanitizeForFilename(s) {
       return (s || 'unknown').replace(/\s+/g, '_').replace(/[^\w\-.]/g, '');
     }
@@ -225,23 +304,18 @@
       const fileInput = document.getElementById('file');
       const file = fileInput.files[0];
       if (!file) return alert('Select a file to upload.');
-
-      // basic extension check
       const allowed = ['pdf','doc','docx'];
       const ext = (file.name.split('.').pop() || '').toLowerCase();
       if (!allowed.includes(ext)) {
         const ok = confirm('Allowed: pdf, doc, docx. Do you still want to upload?');
         if (!ok) return;
       }
-
       uploadStatusEl.textContent = 'Uploading… please wait';
       const safeSubject = sanitizeForFilename(subject || 'Subject');
       const safeFilename = `${Date.now()}__${sanitizeForFilename(file.name)}`;
-      // we store everything at root with unique filename prefix to keep listing simple
       const path = `${sanitizeForFilename(year)}__${safeSubject}__${safeFilename}`;
-
       try {
-        const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
         if (error) throw error;
         uploadStatusEl.textContent = 'Upload successful ✔';
         fileInput.value = '';
@@ -249,11 +323,9 @@
       } catch (err) {
         uploadStatusEl.textContent = '';
         alert('Upload failed: ' + (err.message || err));
-        console.error(err);
       }
     }
 
-    // --------------- List & download (Admin) ----------------
     async function listFiles() {
       fileListEl.innerHTML = '<li class="muted">Loading…</li>';
       try {
@@ -263,20 +335,15 @@
           fileListEl.innerHTML = '<li class="muted">No files found</li>';
           return;
         }
-
         fileListEl.innerHTML = '';
         data.forEach(f => {
-          // f.name is the stored filename
           const li = document.createElement('li');
           const nameSpan = document.createElement('span');
           nameSpan.textContent = f.name;
           li.appendChild(nameSpan);
-
           const btns = document.createElement('div');
-          // Download link — uses public URL. If bucket is private, enable public or use signed URLs server-side.
           const publicRes = supabase.storage.from(BUCKET).getPublicUrl(f.name);
           const publicUrl = publicRes?.data?.publicUrl || null;
-
           const a = document.createElement('a');
           a.href = publicUrl || '#';
           a.target = '_blank';
@@ -285,12 +352,10 @@
           a.onclick = (ev) => {
             if (!publicUrl) {
               ev.preventDefault();
-              alert('No public URL: make the bucket public in Supabase Storage settings or implement signed-URL server-side.');
+              alert('No public URL: make the bucket public in Supabase Storage settings.');
             }
           };
           btns.appendChild(a);
-
-          // Remove button (optional)
           const rm = document.createElement('button');
           rm.style.marginLeft = '8px';
           rm.textContent = 'Delete';
@@ -301,25 +366,20 @@
             listFiles();
           };
           btns.appendChild(rm);
-
           li.appendChild(btns);
           fileListEl.appendChild(li);
         });
-
       } catch (err) {
         fileListEl.innerHTML = '';
         alert('List files error: ' + (err.message || err));
-        console.error(err);
       }
     }
 
-    // Expose functions to global for buttons
     window.signUp = signUp;
     window.signIn = signIn;
     window.signOut = signOut;
     window.uploadFile = uploadFile;
     window.listFiles = listFiles;
-
   </script>
 </body>
 </html>
