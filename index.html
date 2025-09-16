@@ -11,7 +11,7 @@
       --card:#f8faff;
       --bg:#f3f6f9;
       --success:#28a745;
-      --warning:#ffc107;
+      --error:#dc3545;
     }
 
     body{
@@ -141,14 +141,8 @@
     
     .status-error {
       background-color: rgba(220, 53, 69, 0.1);
-      color: #dc3545;
+      color: var(--error);
       border: 1px solid rgba(220, 53, 69, 0.3);
-    }
-    
-    .status-info {
-      background-color: rgba(23, 162, 184, 0.1);
-      color: #17a2b8;
-      border: 1px solid rgba(23, 162, 184, 0.3);
     }
 
     @media (max-width: 768px){
@@ -232,24 +226,6 @@
       <div id="reset-status" class="status-message" style="display:none"></div>
     </div>
 
-    <!-- UPDATE PASSWORD CARD (for after clicking reset link) -->
-    <div class="card" id="update-password-card" style="display:none">
-      <h3>Update Password</h3>
-      <label>New Password</label>
-      <input id="new-password" type="password" placeholder="Enter new password (min 6 chars)" />
-      <label>Confirm Password</label>
-      <input id="confirm-password" type="password" placeholder="Confirm new password" />
-      <div class="row" style="margin-top:10px">
-        <div class="small">
-          <button onclick="updatePassword()">Update Password</button>
-        </div>
-        <div class="small">
-          <button class="secondary" onclick="cancelUpdate()">Cancel</button>
-        </div>
-      </div>
-      <div id="update-status" class="status-message" style="display:none"></div>
-    </div>
-
     <!-- SESSION INFO + Sign Out -->
     <div class="card" id="session-card" style="display:none">
       <div style="display:flex;align-items:center;gap:12px">
@@ -308,7 +284,6 @@
 
     const authCard=document.getElementById('auth-card');
     const resetPasswordCard=document.getElementById('reset-password-card');
-    const updatePasswordCard=document.getElementById('update-password-card');
     const uploadCard=document.getElementById('upload-card');
     const adminCard=document.getElementById('admin-card');
     const sessionCard=document.getElementById('session-card');
@@ -316,22 +291,12 @@
     const userIdEl=document.getElementById('user-id');
     const uploadStatusEl=document.getElementById('upload-status');
     const resetStatusEl=document.getElementById('reset-status');
-    const updateStatusEl=document.getElementById('update-status');
     const fileListEl=document.getElementById('file-list');
     const bgShapes = document.querySelectorAll('.bg-shape');
     const welcomeBanner = document.querySelector('.welcome-banner');
     let currentUser=null;
 
     (async function init(){
-      // Check if we're in a password recovery flow
-      const urlParams = new URLSearchParams(window.location.hash.substring(1));
-      const type = urlParams.get('type');
-      const access_token = urlParams.get('access_token');
-      
-      if (type === 'recovery' && access_token) {
-        showUpdatePassword();
-      }
-      
       const { data }=await supabase.auth.getSession();
       currentUser=data?.session?.user??null;
       updateUI();
@@ -438,67 +403,6 @@
       }
     }
     
-    function showUpdatePassword() {
-      // Hide all other cards
-      authCard.style.display = 'none';
-      resetPasswordCard.style.display = 'none';
-      uploadCard.style.display = 'none';
-      adminCard.style.display = 'none';
-      sessionCard.style.display = 'none';
-      
-      // Show update password card
-      updatePasswordCard.style.display = 'block';
-    }
-    
-    function cancelUpdate() {
-      updatePasswordCard.style.display = 'none';
-      updateStatusEl.style.display = 'none';
-      authCard.style.display = 'block';
-      
-      // Clear the URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    
-    async function updatePassword() {
-      const newPassword = document.getElementById('new-password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-      
-      if (!newPassword || newPassword.length < 6) {
-        showStatus(updateStatusEl, 'Password must be at least 6 characters.', 'error');
-        return;
-      }
-      
-      if (newPassword !== confirmPassword) {
-        showStatus(updateStatusEl, 'Passwords do not match.', 'error');
-        return;
-      }
-      
-      try {
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword
-        });
-        
-        if (error) throw error;
-        
-        showStatus(updateStatusEl, 'Password updated successfully! You can now sign in with your new password.', 'success');
-        
-        // Clear the form
-        document.getElementById('new-password').value = '';
-        document.getElementById('confirm-password').value = '';
-        
-        // Redirect to sign in after a delay
-        setTimeout(() => {
-          updatePasswordCard.style.display = 'none';
-          updateStatusEl.style.display = 'none';
-          authCard.style.display = 'block';
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }, 3000);
-        
-      } catch (error) {
-        showStatus(updateStatusEl, 'Error updating password: ' + error.message, 'error');
-      }
-    }
-    
     function showStatus(element, message, type) {
       element.textContent = message;
       element.className = 'status-message';
@@ -510,21 +414,14 @@
       if(currentUser){
         authCard.style.display='none'; 
         resetPasswordCard.style.display='none';
-        updatePasswordCard.style.display='none';
         uploadCard.style.display='block'; 
         sessionCard.style.display='block';
         userEmailEl.textContent=currentUser.email; 
         userIdEl.textContent=`UID: ${currentUser.id}`;
         adminCard.style.display=ADMINS.includes(currentUser.email.toLowerCase())?'block':'none';
       }else{
-        // Only show auth card if we're not in the middle of a password reset flow
-        const urlParams = new URLSearchParams(window.location.hash.substring(1));
-        const type = urlParams.get('type');
-        if (type !== 'recovery') {
-          authCard.style.display='block'; 
-        }
+        authCard.style.display='block'; 
         resetPasswordCard.style.display='none';
-        updatePasswordCard.style.display='none';
         uploadCard.style.display='none'; 
         adminCard.style.display='none'; 
         sessionCard.style.display='none';
@@ -571,7 +468,6 @@
 
     window.signUp=signUp; window.signIn=signIn; window.signOut=signOut; window.uploadFile=uploadFile; window.listFiles=listFiles;
     window.showResetPassword=showResetPassword; window.cancelReset=cancelReset; window.sendResetLink=sendResetLink;
-    window.cancelUpdate=cancelUpdate; window.updatePassword=updatePassword;
   </script>
 </body>
 </html>
