@@ -129,24 +129,9 @@
       position: absolute;
       border-radius: 50%;
       opacity: 0.15;
-      animation: float 25s linear infinite, colorChange 15s infinite alternate;
       pointer-events: none;
       will-change: transform;
-    }
-
-    @keyframes float{
-      0% {transform: translateY(0) rotate(0deg);}
-      50% {transform: translateY(-50px) rotate(180deg);}
-      100% {transform: translateY(0) rotate(360deg);}
-    }
-
-    @keyframes colorChange{
-      0%{background:#222c65;}
-      20%{background:#1769aa;}
-      40%{background:#1b2455;}
-      60%{background:#3a4a8f;}
-      80%{background:#4b5f9e;}
-      100%{background:#222c65;}
+      transition: transform 0.05s linear;
     }
 
   </style>
@@ -156,11 +141,11 @@
   <div class="welcome-banner">👋 Welcome Chindamanee Teachers! Please Sign up or Sign in before uploading exam paper.</div>
 
   <!-- Animated background shapes -->
-  <div class="bg-shape" style="width:200px;height:200px;top:10%;left:5%;"></div>
-  <div class="bg-shape" style="width:150px;height:150px;top:70%;left:80%;"></div>
-  <div class="bg-shape" style="width:100px;height:100px;top:40%;left:50%;"></div>
-  <div class="bg-shape" style="width:180px;height:180px;top:20%;left:75%;"></div>
-  <div class="bg-shape" style="width:130px;height:130px;top:60%;left:20%;"></div>
+  <div class="bg-shape" style="width:200px;height:200px;top:10%;left:5%;background:#222c65;"></div>
+  <div class="bg-shape" style="width:150px;height:150px;top:70%;left:80%;background:#1769aa;"></div>
+  <div class="bg-shape" style="width:100px;height:100px;top:40%;left:50%;background:#1b2455;"></div>
+  <div class="bg-shape" style="width:180px;height:180px;top:20%;left:75%;background:#3a4a8f;"></div>
+  <div class="bg-shape" style="width:130px;height:130px;top:60%;left:20%;background:#4b5f9e;"></div>
 
   <header>
     <img src="logo.png" alt="Chindamanee Logo" class="logo" onerror="this.style.display='none'">
@@ -242,7 +227,7 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
     const SUPABASE_URL = 'https://vydaeemptmxxixwwoepj.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5ZGFlZW1wdG14eGl4d3dvZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5ODUzMzUsImV4cCI6MjA3MzU2MTMzNX0.46QAkga8WetD8BWNnYq1x-SABBtdv0pbCEtMCuR3x7c';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
     const BUCKET = 'ExamPortal';
     const ADMINS = ['admin@chindamanee.ac.th','principal@chindamanee.ac.th'];
     const supabase = createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
@@ -256,8 +241,9 @@
     const uploadStatusEl=document.getElementById('upload-status');
     const fileListEl=document.getElementById('file-list');
     const bgShapes = document.querySelectorAll('.bg-shape');
-
+    const welcomeBanner = document.querySelector('.welcome-banner');
     let currentUser=null;
+
     (async function init(){
       const { data }=await supabase.auth.getSession();
       currentUser=data?.session?.user??null;
@@ -266,37 +252,47 @@
         currentUser=session?.user??null;
         updateUI();
       });
+      // Fade out welcome banner after 5 seconds
+      setTimeout(()=>{welcomeBanner.style.transition='opacity 1s ease'; welcomeBanner.style.opacity='0';},5000);
     })();
+
+    // Background shapes float randomly
+    document.addEventListener('mousemove', e => {
+      const x = e.clientX / window.innerWidth - 0.5;
+      const y = e.clientY / window.innerHeight - 0.5;
+      bgShapes.forEach((shape, i) => {
+        const speed = (i+1)*10;
+        const scale = 1 + Math.sin(Date.now()/1000 + i) * 0.05;
+        const rotate = (Date.now()/50 + i*30) % 360;
+        shape.style.transform = `translate(${x*speed}px, ${y*speed}px) scale(${scale}) rotate(${rotate}deg)`;
+      });
+    });
 
     function validateSchoolEmail(email){return typeof email==='string' && email.toLowerCase().endsWith('@chindamanee.ac.th');}
     async function signUp(){const email=document.getElementById('email').value.trim(); const password=document.getElementById('password').value;
       if(!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
       if(!password || password.length<6) return alert('Password must be at least 6 characters.');
-      try{const { error }=await supabase.auth.signUp({email,password}); if(error) throw error;
-      alert('Signup successful — check your email for a confirmation link (if enabled).');}catch(err){alert('Sign up error: '+(err.message||err));}
+      try{const { error }=await supabase.auth.signUp({email,password}); if(error) throw error; alert('Signup successful — check your email for a confirmation link.');}catch(err){alert('Sign up error: '+(err.message||err));}
     }
     async function signIn(){const email=document.getElementById('email').value.trim(); const password=document.getElementById('password').value;
       if(!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
       if(!password) return alert('Enter your password.');
       try{const { error }=await supabase.auth.signInWithPassword({email,password}); if(error) throw error;}catch(err){alert('Sign in error: '+(err.message||err));}
     }
-    async function signOut(){await supabase.auth.signOut();currentUser=null;updateUI();}
+    async function signOut(){await supabase.auth.signOut(); currentUser=null; updateUI();}
+
     function updateUI(){
       if(currentUser){
-        authCard.style.display='none';
-        uploadCard.style.display='block';
-        sessionCard.style.display='block';
-        userEmailEl.textContent=currentUser.email;
-        userIdEl.textContent=`UID: ${currentUser.id}`;
+        authCard.style.display='none'; uploadCard.style.display='block'; sessionCard.style.display='block';
+        userEmailEl.textContent=currentUser.email; userIdEl.textContent=`UID: ${currentUser.id}`;
         adminCard.style.display=ADMINS.includes(currentUser.email.toLowerCase())?'block':'none';
       }else{
-        authCard.style.display='block';
-        uploadCard.style.display='none';
-        adminCard.style.display='none';
-        sessionCard.style.display='none';
+        authCard.style.display='block'; uploadCard.style.display='none'; adminCard.style.display='none'; sessionCard.style.display='none';
+        userEmailEl.textContent='--'; userIdEl.textContent='UID: --';
       }
     }
-    function sanitizeForFilename(s){return(s||'unknown').replace(/\s+/g,'_').replace(/[^\w\-.]/g,'');}
+
+    function sanitizeForFilename(s){return (s||'unknown').replace(/\s+/g,'_').replace(/[^\w\-.]/g,'');}
     async function uploadFile(){
       if(!currentUser) return alert('Please sign in first.');
       const year=document.getElementById('year').value;
@@ -310,41 +306,27 @@
       const safeFilename=`${Date.now()}__${sanitizeForFilename(file.name)}`;
       const path=`${sanitizeForFilename(year)}__${safeSubject}__${safeFilename}`;
       try{const { error }=await supabase.storage.from(BUCKET).upload(path,file,{upsert:false}); if(error) throw error;
-        uploadStatusEl.textContent='Upload successful ✔';
-        fileInput.value=''; document.getElementById('subject').value='';
+        uploadStatusEl.textContent='Upload successful ✔'; fileInput.value=''; document.getElementById('subject').value='';
       }catch(err){uploadStatusEl.textContent=''; alert('Upload failed: '+(err.message||err));}
     }
+
     async function listFiles(){
       fileListEl.innerHTML='<li class="muted">Loading…</li>';
       try{
-        const { data,error }=await supabase.storage.from(BUCKET).list('',{limit:200}); if(error) throw error;
-        if(!data || data.length===0){fileListEl.innerHTML='<li class="muted">No files found</li>'; return;}
+        const { data, error }=await supabase.storage.from(BUCKET).list('',{limit:200});
+        if(error) throw error; if(!data || data.length===0){fileListEl.innerHTML='<li class="muted">No files found</li>'; return;}
         fileListEl.innerHTML='';
         data.forEach(f=>{
           const li=document.createElement('li'); const nameSpan=document.createElement('span'); nameSpan.textContent=f.name; li.appendChild(nameSpan);
           const btns=document.createElement('div');
           const publicRes=supabase.storage.from(BUCKET).getPublicUrl(f.name); const publicUrl=publicRes?.data?.publicUrl||null;
           const a=document.createElement('a'); a.href=publicUrl||'#'; a.target='_blank'; a.className='link'; a.textContent='Download';
-          a.onclick=ev=>{if(!publicUrl){ev.preventDefault(); alert('No public URL: make the bucket public in Supabase Storage settings or implement signed-URL server-side.');}};
-          btns.appendChild(a);
-          const rm=document.createElement('button'); rm.style.marginLeft='8px'; rm.textContent='Delete';
-          rm.onclick=async()=>{if(!confirm('Delete file permanently?')) return; const { error }=await supabase.storage.from(BUCKET).remove([f.name]); if(error) return alert('Delete error: '+error.message); listFiles();};
-          btns.appendChild(rm); li.appendChild(btns); fileListEl.appendChild(li);
+          a.onclick=(ev)=>{if(!publicUrl){ev.preventDefault(); alert('No public URL: make the bucket public in Supabase Storage settings.');}}; btns.appendChild(a);
+          const rm=document.createElement('button'); rm.style.marginLeft='8px'; rm.textContent='Delete'; rm.onclick=async()=>{if(!confirm('Delete file permanently?')) return; const { error }=await supabase.storage.from(BUCKET).remove([f.name]); if(error) return alert('Delete error: '+error.message); listFiles();}; btns.appendChild(rm);
+          li.appendChild(btns); fileListEl.appendChild(li);
         });
       }catch(err){fileListEl.innerHTML=''; alert('List files error: '+(err.message||err));}
     }
-
-    // Background shapes interaction
-    document.addEventListener('mousemove', e=>{
-      const x = e.clientX / window.innerWidth - 0.5;
-      const y = e.clientY / window.innerHeight - 0.5;
-      bgShapes.forEach((shape,i)=>{
-        const factor = (i+1)*15;
-        const scale = 1 + Math.sin(Date.now()/1000 + i) * 0.05;
-        const rotate = (Date.now()/50 + i*30) % 360;
-        shape.style.transform = `translate(${x*factor}px, ${y*factor}px) scale(${scale}) rotate(${rotate}deg)`;
-      });
-    });
 
     window.signUp=signUp; window.signIn=signIn; window.signOut=signOut; window.uploadFile=uploadFile; window.listFiles=listFiles;
   </script>
