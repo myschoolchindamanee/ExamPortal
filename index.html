@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Chindamanee School — Exam Portal</title>
+
   <style>
     :root{--primary:#1769aa;--card:#fff;--bg:#f3f6f9}
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;background:var(--bg);color:#111}
@@ -44,23 +45,16 @@
       <label>Password</label>
       <input id="password" type="password" placeholder="Choose a password (min 6 chars)" />
       <div class="row" style="margin-top:10px">
-        <div class="small"><button onclick="signUp()">Sign up (teacher)</button></div>
-        <div class="small"><button onclick="signIn()">Sign in</button></div>
-      </div>
-      <div style="margin-top:8px">
-        <a href="#" onclick="forgotPassword()">Forgot password?</a>
+        <div class="small">
+          <button onclick="signUp()">Sign up (teacher)</button>
+        </div>
+        <div class="small">
+          <button onclick="signIn()">Sign in</button>
+        </div>
       </div>
       <div style="margin-top:8px" class="muted">
         Only <strong>@chindamanee.ac.th</strong> emails are accepted by this page.
       </div>
-    </div>
-
-    <!-- RESET PASSWORD CARD -->
-    <div class="card" id="reset-card" style="display:none">
-      <h3>Reset Password</h3>
-      <label>New Password</label>
-      <input id="new-password" type="password" placeholder="Enter new password" />
-      <button onclick="updatePassword()">Update Password</button>
     </div>
 
     <!-- SESSION INFO + Sign Out -->
@@ -79,20 +73,25 @@
     <!-- UPLOAD -->
     <div class="card" id="upload-card" style="display:none">
       <h3>Upload Exam Paper</h3>
+
       <label>Class / Year</label>
       <select id="year">
         <option>Year 7</option><option>Year 8</option><option>Year 9</option>
         <option>Year 10</option><option>Year 11</option><option>Year 12</option><option>Year 13</option>
       </select>
+
       <label>Subject</label>
       <input id="subject" type="text" placeholder="e.g., Mathematics, English" />
+
       <label>Choose file (PDF, DOC, DOCX allowed)</label>
-      <input id="file" type="file" accept=".pdf,.doc,.docx" />
+      <input id="file" type="file" accept=".pdf,application/pdf, .doc, .docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+
       <button onclick="uploadFile()">Upload to Supabase</button>
+
       <div id="upload-status" class="muted" style="margin-top:10px"></div>
     </div>
 
-    <!-- ADMIN SECTION -->
+    <!-- ADMIN SECTION (list & download) -->
     <div class="card" id="admin-card" style="display:none">
       <h3>Admin — Files list & download</h3>
       <div style="display:flex;gap:8px;align-items:center">
@@ -104,36 +103,38 @@
     </div>
 
     <!-- Simple footer -->
-    <div style="margin-top:8px;font-size:13px;color:#666">
-      For assistance please contact ICT department. Thank you teacher.
-    </div>
+    <div style="margin-top:8px;font-size:13px;color:#666">If something breaks — open Browser Console (F12) and tell me the exact error and I'll help.</div>
   </div>
 
-  <!-- Script -->
+  <!-- Script: Supabase & Portal logic -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
+    // ---------- CONFIG (change these only if you want) ----------
     const SUPABASE_URL = 'https://vydaeemptmxxixwwoepj.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';  // replace with your anon key
-    const BUCKET = 'ExamPortal';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5ZGFlZW1wdG14eGl4d3dvZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5ODUzMzUsImV4cCI6MjA3MzU2MTMzNX0.46QAkga8WetD8BWNnYq1x-SABBtdv0pbCEtMCuR3x7c';
+    const BUCKET = 'ExamPortal'; // exactly the bucket name you created
+    // Add admin emails here (who can see the Admin UI). Change as you like.
     const ADMINS = ['admin@chindamanee.ac.th', 'principal@chindamanee.ac.th'];
 
+    // ---------- Init supabase ----------
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // UI elements
     const authCard = document.getElementById('auth-card');
     const uploadCard = document.getElementById('upload-card');
     const adminCard = document.getElementById('admin-card');
     const sessionCard = document.getElementById('session-card');
-    const resetCard = document.getElementById('reset-card');
     const userEmailEl = document.getElementById('user-email');
     const userIdEl = document.getElementById('user-id');
     const uploadStatusEl = document.getElementById('upload-status');
     const fileListEl = document.getElementById('file-list');
 
+    // Keep current user
     let currentUser = null;
 
-    // On load
-    (async function init() {
+    // On load: check session and subscribe to auth changes
+    ;(async function init() {
       const { data } = await supabase.auth.getSession();
       currentUser = data?.session?.user ?? null;
       updateUI();
@@ -142,15 +143,9 @@
         currentUser = session?.user ?? null;
         updateUI();
       });
-
-      // Check if this is a reset-password redirect
-      const hash = window.location.hash;
-      if (hash.includes('type=recovery')) {
-        authCard.style.display = 'none';
-        resetCard.style.display = 'block';
-      }
     })();
 
+    // --------------- AUTH ----------------
     function validateSchoolEmail(email) {
       return typeof email === 'string' && email.toLowerCase().endsWith('@chindamanee.ac.th');
     }
@@ -160,36 +155,31 @@
       const password = document.getElementById('password').value;
       if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
       if (!password || password.length < 6) return alert('Password must be at least 6 characters.');
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) return alert('Sign up error: ' + error.message);
-      alert('Signup successful. Check your email to confirm.');
+
+      try {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        alert('Signup successful — check your email for a confirmation link (if enabled).');
+      } catch (err) {
+        alert('Sign up error: ' + (err.message || err));
+        console.error(err);
+      }
     }
 
     async function signIn() {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return alert('Sign in error: ' + error.message);
-    }
+      if (!password) return alert('Enter your password.');
 
-    async function forgotPassword() {
-      const email = document.getElementById('email').value.trim();
-      if (!validateSchoolEmail(email)) return alert('Enter your @chindamanee.ac.th email first.');
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + window.location.pathname
-      });
-      if (error) return alert('Error: ' + error.message);
-      alert('Password reset link sent! Check your email.');
-    }
-
-    async function updatePassword() {
-      const newPass = document.getElementById('new-password').value;
-      if (!newPass || newPass.length < 6) return alert('Password must be at least 6 characters.');
-      const { error } = await supabase.auth.updateUser({ password: newPass });
-      if (error) return alert('Error: ' + error.message);
-      alert('Password updated! You can now sign in.');
-      window.location.href = window.location.pathname; // reload clean
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        // success: auth.onAuthStateChange will update UI
+      } catch (err) {
+        alert('Sign in error: ' + (err.message || err));
+        console.error(err);
+      }
     }
 
     async function signOut() {
@@ -198,24 +188,36 @@
       updateUI();
     }
 
+    // --------------- UI updates ----------------
     function updateUI() {
       if (currentUser) {
         authCard.style.display = 'none';
-        resetCard.style.display = 'none';
         uploadCard.style.display = 'block';
         sessionCard.style.display = 'block';
         userEmailEl.textContent = currentUser.email;
         userIdEl.textContent = `UID: ${currentUser.id}`;
-        adminCard.style.display = ADMINS.includes(currentUser.email.toLowerCase()) ? 'block' : 'none';
+
+        // Only show admin if in ADMINS list
+        if (ADMINS.includes(currentUser.email.toLowerCase())) {
+          adminCard.style.display = 'block';
+        } else {
+          adminCard.style.display = 'none';
+        }
       } else {
         authCard.style.display = 'block';
         uploadCard.style.display = 'none';
         adminCard.style.display = 'none';
         sessionCard.style.display = 'none';
+        userEmailEl.textContent = '--';
+        userIdEl.textContent = 'UID: --';
       }
     }
 
-    // uploadFile + listFiles remain same (reuse your existing code)
+    // --------------- Upload ----------------
+    function sanitizeForFilename(s) {
+      return (s || 'unknown').replace(/\s+/g, '_').replace(/[^\w\-.]/g, '');
+    }
+
     async function uploadFile() {
       if (!currentUser) return alert('Please sign in first.');
       const year = document.getElementById('year').value;
@@ -223,41 +225,101 @@
       const fileInput = document.getElementById('file');
       const file = fileInput.files[0];
       if (!file) return alert('Select a file to upload.');
-      uploadStatusEl.textContent = 'Uploading…';
-      const path = `${year}__${subject || 'Subject'}__${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file);
-      if (error) {
-        uploadStatusEl.textContent = '';
-        return alert('Upload failed: ' + error.message);
+
+      // basic extension check
+      const allowed = ['pdf','doc','docx'];
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (!allowed.includes(ext)) {
+        const ok = confirm('Allowed: pdf, doc, docx. Do you still want to upload?');
+        if (!ok) return;
       }
-      uploadStatusEl.textContent = 'Upload successful ✔';
-      fileInput.value = '';
-      document.getElementById('subject').value = '';
+
+      uploadStatusEl.textContent = 'Uploading… please wait';
+      const safeSubject = sanitizeForFilename(subject || 'Subject');
+      const safeFilename = `${Date.now()}__${sanitizeForFilename(file.name)}`;
+      // we store everything at root with unique filename prefix to keep listing simple
+      const path = `${sanitizeForFilename(year)}__${safeSubject}__${safeFilename}`;
+
+      try {
+        const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
+        if (error) throw error;
+        uploadStatusEl.textContent = 'Upload successful ✔';
+        fileInput.value = '';
+        document.getElementById('subject').value = '';
+      } catch (err) {
+        uploadStatusEl.textContent = '';
+        alert('Upload failed: ' + (err.message || err));
+        console.error(err);
+      }
     }
 
+    // --------------- List & download (Admin) ----------------
     async function listFiles() {
       fileListEl.innerHTML = '<li class="muted">Loading…</li>';
-      const { data, error } = await supabase.storage.from(BUCKET).list('', { limit: 200 });
-      if (error) return alert('List files error: ' + error.message);
-      if (!data || data.length === 0) {
-        fileListEl.innerHTML = '<li class="muted">No files found</li>';
-        return;
+      try {
+        const { data, error } = await supabase.storage.from(BUCKET).list('', { limit: 200 });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          fileListEl.innerHTML = '<li class="muted">No files found</li>';
+          return;
+        }
+
+        fileListEl.innerHTML = '';
+        data.forEach(f => {
+          // f.name is the stored filename
+          const li = document.createElement('li');
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = f.name;
+          li.appendChild(nameSpan);
+
+          const btns = document.createElement('div');
+          // Download link — uses public URL. If bucket is private, enable public or use signed URLs server-side.
+          const publicRes = supabase.storage.from(BUCKET).getPublicUrl(f.name);
+          const publicUrl = publicRes?.data?.publicUrl || null;
+
+          const a = document.createElement('a');
+          a.href = publicUrl || '#';
+          a.target = '_blank';
+          a.className = 'link';
+          a.textContent = 'Download';
+          a.onclick = (ev) => {
+            if (!publicUrl) {
+              ev.preventDefault();
+              alert('No public URL: make the bucket public in Supabase Storage settings or implement signed-URL server-side.');
+            }
+          };
+          btns.appendChild(a);
+
+          // Remove button (optional)
+          const rm = document.createElement('button');
+          rm.style.marginLeft = '8px';
+          rm.textContent = 'Delete';
+          rm.onclick = async () => {
+            if (!confirm('Delete file permanently?')) return;
+            const { error } = await supabase.storage.from(BUCKET).remove([f.name]);
+            if (error) return alert('Delete error: ' + error.message);
+            listFiles();
+          };
+          btns.appendChild(rm);
+
+          li.appendChild(btns);
+          fileListEl.appendChild(li);
+        });
+
+      } catch (err) {
+        fileListEl.innerHTML = '';
+        alert('List files error: ' + (err.message || err));
+        console.error(err);
       }
-      fileListEl.innerHTML = '';
-      data.forEach(f => {
-        const li = document.createElement('li');
-        li.textContent = f.name;
-        fileListEl.appendChild(li);
-      });
     }
 
+    // Expose functions to global for buttons
     window.signUp = signUp;
     window.signIn = signIn;
     window.signOut = signOut;
-    window.forgotPassword = forgotPassword;
-    window.updatePassword = updatePassword;
     window.uploadFile = uploadFile;
     window.listFiles = listFiles;
+
   </script>
 </body>
 </html>
