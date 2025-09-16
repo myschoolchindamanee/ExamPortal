@@ -44,35 +44,20 @@
       <label>Password</label>
       <input id="password" type="password" placeholder="Choose a password (min 6 chars)" />
       <div class="row" style="margin-top:10px">
-        <div class="small">
-          <button onclick="signUp()">Sign up (teacher)</button>
-        </div>
-        <div class="small">
-          <button onclick="signIn()">Sign in</button>
-        </div>
+        <div class="small"><button onclick="signUp()">Sign up (teacher)</button></div>
+        <div class="small"><button onclick="signIn()">Sign in</button></div>
       </div>
-      <!-- NEW Forgot Password button -->
       <div style="margin-top:8px">
-        <button onclick="showResetPassword()">Forgot Password?</button>
+        <a href="#" onclick="forgotPassword()">Forgot password?</a>
       </div>
       <div style="margin-top:8px" class="muted">
         Only <strong>@chindamanee.ac.th</strong> emails are accepted by this page.
       </div>
     </div>
 
-    <!-- NEW: Password reset request card -->
-    <div class="card" id="reset-password-card" style="display:none">
+    <!-- RESET PASSWORD CARD -->
+    <div class="card" id="reset-card" style="display:none">
       <h3>Reset Password</h3>
-      <label>Email</label>
-      <input id="reset-email" type="email" placeholder="name@chindamanee.ac.th" />
-      <button onclick="resetPassword()">Send reset link</button>
-      <div class="muted" style="margin-top:8px">You’ll receive an email with a link to set a new password.</div>
-      <button onclick="backToAuth()">Back</button>
-    </div>
-
-    <!-- NEW: Update password card (after reset link) -->
-    <div class="card" id="update-password-card" style="display:none">
-      <h3>Set a New Password</h3>
       <label>New Password</label>
       <input id="new-password" type="password" placeholder="Enter new password" />
       <button onclick="updatePassword()">Update Password</button>
@@ -102,7 +87,7 @@
       <label>Subject</label>
       <input id="subject" type="text" placeholder="e.g., Mathematics, English" />
       <label>Choose file (PDF, DOC, DOCX allowed)</label>
-      <input id="file" type="file" accept=".pdf,application/pdf, .doc, .docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+      <input id="file" type="file" accept=".pdf,.doc,.docx" />
       <button onclick="uploadFile()">Upload to Supabase</button>
       <div id="upload-status" class="muted" style="margin-top:10px"></div>
     </div>
@@ -118,8 +103,10 @@
       <div class="muted" style="margin-top:8px">If downloads fail, make the bucket public in Supabase Storage settings (simpler for printing).</div>
     </div>
 
-    <!-- footer -->
-    <div style="margin-top:8px;font-size:13px;color:#666">If something breaks — open Browser Console (F12) and tell me the exact error and I'll help.</div>
+    <!-- Simple footer -->
+    <div style="margin-top:8px;font-size:13px;color:#666">
+      For assistance please contact ICT department. Thank you teacher.
+    </div>
   </div>
 
   <!-- Script -->
@@ -127,18 +114,17 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
     const SUPABASE_URL = 'https://vydaeemptmxxixwwoepj.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_KEY_HERE';
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';  // replace with your anon key
     const BUCKET = 'ExamPortal';
-    const ADMINS = ['admin@chindamanee.ac.th','principal@chindamanee.ac.th'];
+    const ADMINS = ['admin@chindamanee.ac.th', 'principal@chindamanee.ac.th'];
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const authCard = document.getElementById('auth-card');
-    const resetCard = document.getElementById('reset-password-card'); // NEW
-    const updatePwCard = document.getElementById('update-password-card'); // NEW
     const uploadCard = document.getElementById('upload-card');
     const adminCard = document.getElementById('admin-card');
     const sessionCard = document.getElementById('session-card');
+    const resetCard = document.getElementById('reset-card');
     const userEmailEl = document.getElementById('user-email');
     const userIdEl = document.getElementById('user-id');
     const uploadStatusEl = document.getElementById('upload-status');
@@ -146,74 +132,132 @@
 
     let currentUser = null;
 
-    // Init
+    // On load
     (async function init() {
       const { data } = await supabase.auth.getSession();
       currentUser = data?.session?.user ?? null;
       updateUI();
 
-      // Detect if in recovery mode (from reset link)
-      supabase.auth.onAuthStateChange((event, session) => {
+      supabase.auth.onAuthStateChange((_event, session) => {
         currentUser = session?.user ?? null;
-        if (event === 'PASSWORD_RECOVERY') {
-          showUpdatePassword();
-        }
         updateUI();
       });
+
+      // Check if this is a reset-password redirect
+      const hash = window.location.hash;
+      if (hash.includes('type=recovery')) {
+        authCard.style.display = 'none';
+        resetCard.style.display = 'block';
+      }
     })();
 
     function validateSchoolEmail(email) {
       return typeof email === 'string' && email.toLowerCase().endsWith('@chindamanee.ac.th');
     }
 
-    async function signUp() { /* unchanged */ }
-    async function signIn() { /* unchanged */ }
-    async function signOut() { await supabase.auth.signOut(); currentUser=null; updateUI(); }
-
-    // --- NEW Forgot Password system ---
-    function showResetPassword() {
-      authCard.style.display = 'none';
-      resetCard.style.display = 'block';
-    }
-    function backToAuth() {
-      resetCard.style.display = 'none';
-      updatePwCard.style.display = 'none';
-      authCard.style.display = 'block';
-    }
-    async function resetPassword() {
-      const email = document.getElementById('reset-email').value.trim();
+    async function signUp() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
       if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
+      if (!password || password.length < 6) return alert('Password must be at least 6 characters.');
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) return alert('Sign up error: ' + error.message);
+      alert('Signup successful. Check your email to confirm.');
+    }
+
+    async function signIn() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return alert('Sign in error: ' + error.message);
+    }
+
+    async function forgotPassword() {
+      const email = document.getElementById('email').value.trim();
+      if (!validateSchoolEmail(email)) return alert('Enter your @chindamanee.ac.th email first.');
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.href // sends them back here
+        redirectTo: window.location.origin + window.location.pathname
       });
-      if (error) return alert('Error: '+error.message);
-      alert('Password reset email sent. Check your inbox.');
-      backToAuth();
+      if (error) return alert('Error: ' + error.message);
+      alert('Password reset link sent! Check your email.');
     }
-    function showUpdatePassword() {
-      authCard.style.display = 'none';
-      resetCard.style.display = 'none';
-      updatePwCard.style.display = 'block';
-    }
+
     async function updatePassword() {
-      const newPw = document.getElementById('new-password').value;
-      if (!newPw || newPw.length < 6) return alert('Password must be at least 6 characters.');
-      const { data, error } = await supabase.auth.updateUser({ password: newPw });
-      if (error) return alert('Error: '+error.message);
-      alert('Password updated successfully. You can now sign in.');
-      backToAuth();
+      const newPass = document.getElementById('new-password').value;
+      if (!newPass || newPass.length < 6) return alert('Password must be at least 6 characters.');
+      const { error } = await supabase.auth.updateUser({ password: newPass });
+      if (error) return alert('Error: ' + error.message);
+      alert('Password updated! You can now sign in.');
+      window.location.href = window.location.pathname; // reload clean
     }
 
-    function updateUI() { /* unchanged except normal cards */ }
+    async function signOut() {
+      await supabase.auth.signOut();
+      currentUser = null;
+      updateUI();
+    }
 
-    async function uploadFile(){ /* unchanged */ }
-    async function listFiles(){ /* unchanged */ }
+    function updateUI() {
+      if (currentUser) {
+        authCard.style.display = 'none';
+        resetCard.style.display = 'none';
+        uploadCard.style.display = 'block';
+        sessionCard.style.display = 'block';
+        userEmailEl.textContent = currentUser.email;
+        userIdEl.textContent = `UID: ${currentUser.id}`;
+        adminCard.style.display = ADMINS.includes(currentUser.email.toLowerCase()) ? 'block' : 'none';
+      } else {
+        authCard.style.display = 'block';
+        uploadCard.style.display = 'none';
+        adminCard.style.display = 'none';
+        sessionCard.style.display = 'none';
+      }
+    }
 
-    // Expose globals
-    window.signUp=signUp; window.signIn=signIn; window.signOut=signOut;
-    window.uploadFile=uploadFile; window.listFiles=listFiles;
-    window.showResetPassword=showResetPassword; window.backToAuth=backToAuth;
-    window.resetPassword=resetPassword; window.updatePassword=updatePassword;
+    // uploadFile + listFiles remain same (reuse your existing code)
+    async function uploadFile() {
+      if (!currentUser) return alert('Please sign in first.');
+      const year = document.getElementById('year').value;
+      const subject = document.getElementById('subject').value.trim();
+      const fileInput = document.getElementById('file');
+      const file = fileInput.files[0];
+      if (!file) return alert('Select a file to upload.');
+      uploadStatusEl.textContent = 'Uploading…';
+      const path = `${year}__${subject || 'Subject'}__${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file);
+      if (error) {
+        uploadStatusEl.textContent = '';
+        return alert('Upload failed: ' + error.message);
+      }
+      uploadStatusEl.textContent = 'Upload successful ✔';
+      fileInput.value = '';
+      document.getElementById('subject').value = '';
+    }
+
+    async function listFiles() {
+      fileListEl.innerHTML = '<li class="muted">Loading…</li>';
+      const { data, error } = await supabase.storage.from(BUCKET).list('', { limit: 200 });
+      if (error) return alert('List files error: ' + error.message);
+      if (!data || data.length === 0) {
+        fileListEl.innerHTML = '<li class="muted">No files found</li>';
+        return;
+      }
+      fileListEl.innerHTML = '';
+      data.forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = f.name;
+        fileListEl.appendChild(li);
+      });
+    }
+
+    window.signUp = signUp;
+    window.signIn = signIn;
+    window.signOut = signOut;
+    window.forgotPassword = forgotPassword;
+    window.updatePassword = updatePassword;
+    window.uploadFile = uploadFile;
+    window.listFiles = listFiles;
   </script>
 </body>
 </html>
