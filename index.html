@@ -15,8 +15,55 @@
     body{
       font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
       margin:0;
-      background:linear-gradient(135deg, #f3f6f9 0%, #e8eef7 100%);
+      background: var(--bg);
       color:#111;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Animated background shapes */
+    .bg-shape{
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.15;
+      animation: float 25s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes float{
+      0% {transform: translateY(0) rotate(0deg);}
+      50% {transform: translateY(-50px) rotate(180deg);}
+      100% {transform: translateY(0) rotate(360deg);}
+    }
+
+    /* Floating welcome banner */
+    .welcome-banner{
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-50%);
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 500;
+      opacity: 0;
+      animation: slideIn 1.2s ease-out forwards, wave 3s ease-in-out infinite alternate;
+      z-index: 9999;
+      text-align: center;
+      max-width: 90%;
+    }
+
+    @keyframes slideIn{
+      0%{opacity:0; transform: translateX(-50%) translateY(-50%);}
+      100%{opacity:1; transform: translateX(-50%) translateY(0);}
+    }
+
+    @keyframes wave{
+      0%{transform: translateX(-50%) translateY(0);}
+      50%{transform: translateX(-50%) translateY(-5px);}
+      100%{transform: translateX(-50%) translateY(0);}
     }
 
     /* Header with school color */
@@ -31,6 +78,8 @@
       color: #fff;
       border-radius: 12px;
       flex-wrap: wrap;
+      position: relative;
+      z-index: 2;
     }
 
     header h1, header .muted {
@@ -46,9 +95,8 @@
       padding:4px;
     }
 
-    .container{max-width:960px;margin:0 auto;padding:12px}
+    .container{max-width:960px;margin:0 auto;padding:12px; position: relative; z-index: 2;}
 
-    /* Card styling with soft tint and hover lift */
     .card{
       background: var(--card);
       border-radius:12px;
@@ -74,7 +122,6 @@
     }
     input[type="file"]{margin-top:8px}
 
-    /* Buttons school color with hover effect */
     button{
       background:var(--primary);
       color:#fff;
@@ -86,7 +133,7 @@
       transition: background 0.3s ease, transform 0.2s ease;
     }
     button:hover{
-      background:#1b2455; /* slightly darker shade */
+      background:#1b2455;
       transform: translateY(-2px);
     }
 
@@ -99,33 +146,28 @@
     .right{margin-left:auto}
     .topbar{display:flex;gap:12px;align-items:center;justify-content:flex-end; flex-wrap: wrap;}
 
-    /* Responsive adjustments */
     @media (max-width: 768px){
-      header{
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .row{
-        flex-direction: column;
-      }
-      .small{
-        max-width: 100%;
-      }
-      .topbar{
-        justify-content: flex-start;
-      }
-      ul.file-list li{
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      ul.file-list li div{
-        margin-top:6px;
-      }
+      header{flex-direction: column; align-items: flex-start;}
+      .row{flex-direction: column;}
+      .small{max-width: 100%;}
+      .topbar{justify-content: flex-start;}
+      ul.file-list li{flex-direction: column; align-items: flex-start;}
+      ul.file-list li div{margin-top:6px;}
     }
 
   </style>
 </head>
 <body>
+  <!-- Floating welcome banner -->
+  <div class="welcome-banner">👋 Welcome Chindamanee Teachers! Please Sign up or Sign in before uploading exam paper.</div>
+
+  <!-- Animated background shapes -->
+  <div class="bg-shape" style="width:200px;height:200px;top:10%;left:5%;background:#222c65;"></div>
+  <div class="bg-shape" style="width:150px;height:150px;top:70%;left:80%;background:#1769aa;"></div>
+  <div class="bg-shape" style="width:100px;height:100px;top:40%;left:50%;background:#4b5f9e;"></div>
+  <div class="bg-shape" style="width:180px;height:180px;top:20%;left:75%;background:#1b2455;"></div>
+  <div class="bg-shape" style="width:130px;height:130px;top:60%;left:20%;background:#3a4a8f;"></div>
+
   <header>
     <img src="logo.png" alt="Chindamanee Logo" class="logo" onerror="this.style.display='none'">
     <div>
@@ -203,7 +245,6 @@
     <div style="margin-top:8px;font-size:13px;color:#666">If something breaks — open Browser Console (F12) and tell me the exact error and I'll help.</div>
   </div>
 
-  <!-- Script: Supabase & Portal logic -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
@@ -226,7 +267,6 @@
     let currentUser = null;
 
     ;(async function init() {
-      alert("👋 Hi Chindamanee Teachers!\nPlease Sign up or Sign in before uploading exam paper.");
       const { data } = await supabase.auth.getSession();
       currentUser = data?.session?.user ?? null;
       updateUI();
