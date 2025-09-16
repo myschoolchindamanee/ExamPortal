@@ -21,21 +21,6 @@
       position: relative;
     }
 
-    /* Animated background shapes */
-    .bg-shape{
-      position: absolute;
-      border-radius: 50%;
-      opacity: 0.15;
-      animation: float 25s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes float{
-      0% {transform: translateY(0) rotate(0deg);}
-      50% {transform: translateY(-50px) rotate(180deg);}
-      100% {transform: translateY(0) rotate(360deg);}
-    }
-
     /* Floating welcome banner */
     .welcome-banner{
       position: fixed;
@@ -82,18 +67,8 @@
       z-index: 2;
     }
 
-    header h1, header .muted {
-      color: #fff;
-      margin: 0;
-    }
-
-    img.logo {
-      width:86px;
-      height:auto;
-      border-radius:8px;
-      background:#fff;
-      padding:4px;
-    }
+    header h1, header .muted { color:#fff; margin:0; }
+    img.logo { width:86px; height:auto; border-radius:8px; background:#fff; padding:4px; }
 
     .container{max-width:960px;margin:0 auto;padding:12px; position: relative; z-index: 2;}
 
@@ -106,10 +81,7 @@
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .card:hover{
-      transform: translateY(-5px);
-      box-shadow:0 12px 24px rgba(20,30,40,0.12);
-    }
+    .card:hover{ transform: translateY(-5px); box-shadow:0 12px 24px rgba(20,30,40,0.12); }
 
     label{display:block;margin-top:10px;font-size:13px;color:#333}
     input[type="text"],input[type="email"],input[type="password"],select{
@@ -132,10 +104,7 @@
       margin-top:12px;
       transition: background 0.3s ease, transform 0.2s ease;
     }
-    button:hover{
-      background:#1b2455;
-      transform: translateY(-2px);
-    }
+    button:hover{ background:#1b2455; transform: translateY(-2px); }
 
     .muted{color:#666;font-size:13px}
     .row{display:flex;gap:12px;flex-wrap:wrap}
@@ -155,6 +124,31 @@
       ul.file-list li div{margin-top:6px;}
     }
 
+    /* Background shapes */
+    .bg-shape{
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.15;
+      animation: float 25s linear infinite, colorChange 15s infinite alternate;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    @keyframes float{
+      0% {transform: translateY(0) rotate(0deg);}
+      50% {transform: translateY(-50px) rotate(180deg);}
+      100% {transform: translateY(0) rotate(360deg);}
+    }
+
+    @keyframes colorChange{
+      0%{background:#222c65;}
+      20%{background:#1769aa;}
+      40%{background:#1b2455;}
+      60%{background:#3a4a8f;}
+      80%{background:#4b5f9e;}
+      100%{background:#222c65;}
+    }
+
   </style>
 </head>
 <body>
@@ -162,11 +156,11 @@
   <div class="welcome-banner">👋 Welcome Chindamanee Teachers! Please Sign up or Sign in before uploading exam paper.</div>
 
   <!-- Animated background shapes -->
-  <div class="bg-shape" style="width:200px;height:200px;top:10%;left:5%;background:#222c65;"></div>
-  <div class="bg-shape" style="width:150px;height:150px;top:70%;left:80%;background:#1769aa;"></div>
-  <div class="bg-shape" style="width:100px;height:100px;top:40%;left:50%;background:#4b5f9e;"></div>
-  <div class="bg-shape" style="width:180px;height:180px;top:20%;left:75%;background:#1b2455;"></div>
-  <div class="bg-shape" style="width:130px;height:130px;top:60%;left:20%;background:#3a4a8f;"></div>
+  <div class="bg-shape" style="width:200px;height:200px;top:10%;left:5%;"></div>
+  <div class="bg-shape" style="width:150px;height:150px;top:70%;left:80%;"></div>
+  <div class="bg-shape" style="width:100px;height:100px;top:40%;left:50%;"></div>
+  <div class="bg-shape" style="width:180px;height:180px;top:20%;left:75%;"></div>
+  <div class="bg-shape" style="width:130px;height:130px;top:60%;left:20%;"></div>
 
   <header>
     <img src="logo.png" alt="Chindamanee Logo" class="logo" onerror="this.style.display='none'">
@@ -213,7 +207,6 @@
     <!-- UPLOAD -->
     <div class="card" id="upload-card" style="display:none">
       <h3>Upload Exam Paper</h3>
-
       <label>Class / Year</label>
       <select id="year">
         <option>Year 7</option><option>Year 8</option><option>Year 9</option>
@@ -224,14 +217,13 @@
       <input id="subject" type="text" placeholder="e.g., Mathematics, English" />
 
       <label>Choose file (PDF, DOC, DOCX allowed)</label>
-      <input id="file" type="file" accept=".pdf,application/pdf, .doc, .docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+      <input id="file" type="file" accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
 
       <button onclick="uploadFile()">Upload to Supabase</button>
-
       <div id="upload-status" class="muted" style="margin-top:10px"></div>
     </div>
 
-    <!-- ADMIN SECTION (list & download) -->
+    <!-- ADMIN SECTION -->
     <div class="card" id="admin-card" style="display:none">
       <h3>Admin — Files list & download</h3>
       <div style="display:flex;gap:8px;align-items:center">
@@ -239,187 +231,122 @@
         <div class="muted" style="margin-left:auto">Bucket: <strong>ExamPortal</strong></div>
       </div>
       <ul id="file-list" class="file-list"></ul>
-      <div class="muted" style="margin-top:8px">If downloads fail, make the bucket public in Supabase Storage settings (simpler for printing).</div>
+      <div class="muted" style="margin-top:8px">If downloads fail, make the bucket public in Supabase Storage settings.</div>
     </div>
 
-    <div style="margin-top:8px;font-size:13px;color:#666">If something breaks — open Browser Console (F12) and tell me the exact error and I'll help.</div>
+    <div style="margin-top:8px;font-size:13px;color:#666">
+      For assistance please contact ICT department. Thank you teacher.
+    </div>
   </div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-
     const SUPABASE_URL = 'https://vydaeemptmxxixwwoepj.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5ZGFlZW1wdG14eGl4d3dvZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5ODUzMzUsImV4cCI6MjA3MzU2MTMzNX0.46QAkga8WetD8BWNnYq1x-SABBtdv0pbCEtMCuR3x7c';
     const BUCKET = 'ExamPortal';
-    const ADMINS = ['admin@chindamanee.ac.th', 'principal@chindamanee.ac.th'];
+    const ADMINS = ['admin@chindamanee.ac.th','principal@chindamanee.ac.th'];
+    const supabase = createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const authCard=document.getElementById('auth-card');
+    const uploadCard=document.getElementById('upload-card');
+    const adminCard=document.getElementById('admin-card');
+    const sessionCard=document.getElementById('session-card');
+    const userEmailEl=document.getElementById('user-email');
+    const userIdEl=document.getElementById('user-id');
+    const uploadStatusEl=document.getElementById('upload-status');
+    const fileListEl=document.getElementById('file-list');
+    const bgShapes = document.querySelectorAll('.bg-shape');
 
-    const authCard = document.getElementById('auth-card');
-    const uploadCard = document.getElementById('upload-card');
-    const adminCard = document.getElementById('admin-card');
-    const sessionCard = document.getElementById('session-card');
-    const userEmailEl = document.getElementById('user-email');
-    const userIdEl = document.getElementById('user-id');
-    const uploadStatusEl = document.getElementById('upload-status');
-    const fileListEl = document.getElementById('file-list');
-
-    let currentUser = null;
-
-    ;(async function init() {
-      const { data } = await supabase.auth.getSession();
-      currentUser = data?.session?.user ?? null;
+    let currentUser=null;
+    (async function init(){
+      const { data }=await supabase.auth.getSession();
+      currentUser=data?.session?.user??null;
       updateUI();
-      supabase.auth.onAuthStateChange((_event, session) => {
-        currentUser = session?.user ?? null;
+      supabase.auth.onAuthStateChange((_event,session)=>{
+        currentUser=session?.user??null;
         updateUI();
       });
     })();
 
-    function validateSchoolEmail(email) {
-      return typeof email === 'string' && email.toLowerCase().endsWith('@chindamanee.ac.th');
+    function validateSchoolEmail(email){return typeof email==='string' && email.toLowerCase().endsWith('@chindamanee.ac.th');}
+    async function signUp(){const email=document.getElementById('email').value.trim(); const password=document.getElementById('password').value;
+      if(!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
+      if(!password || password.length<6) return alert('Password must be at least 6 characters.');
+      try{const { error }=await supabase.auth.signUp({email,password}); if(error) throw error;
+      alert('Signup successful — check your email for a confirmation link (if enabled).');}catch(err){alert('Sign up error: '+(err.message||err));}
     }
-
-    async function signUp() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
-      if (!password || password.length < 6) return alert('Password must be at least 6 characters.');
-      try {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        alert('Signup successful — check your email for a confirmation link (if enabled).');
-      } catch (err) {
-        alert('Sign up error: ' + (err.message || err));
+    async function signIn(){const email=document.getElementById('email').value.trim(); const password=document.getElementById('password').value;
+      if(!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
+      if(!password) return alert('Enter your password.');
+      try{const { error }=await supabase.auth.signInWithPassword({email,password}); if(error) throw error;}catch(err){alert('Sign in error: '+(err.message||err));}
+    }
+    async function signOut(){await supabase.auth.signOut();currentUser=null;updateUI();}
+    function updateUI(){
+      if(currentUser){
+        authCard.style.display='none';
+        uploadCard.style.display='block';
+        sessionCard.style.display='block';
+        userEmailEl.textContent=currentUser.email;
+        userIdEl.textContent=`UID: ${currentUser.id}`;
+        adminCard.style.display=ADMINS.includes(currentUser.email.toLowerCase())?'block':'none';
+      }else{
+        authCard.style.display='block';
+        uploadCard.style.display='none';
+        adminCard.style.display='none';
+        sessionCard.style.display='none';
       }
     }
-
-    async function signIn() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      if (!validateSchoolEmail(email)) return alert('Only @chindamanee.ac.th emails are allowed.');
-      if (!password) return alert('Enter your password.');
-      try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } catch (err) {
-        alert('Sign in error: ' + (err.message || err));
-      }
+    function sanitizeForFilename(s){return(s||'unknown').replace(/\s+/g,'_').replace(/[^\w\-.]/g,'');}
+    async function uploadFile(){
+      if(!currentUser) return alert('Please sign in first.');
+      const year=document.getElementById('year').value;
+      const subject=document.getElementById('subject').value.trim();
+      const fileInput=document.getElementById('file'); const file=fileInput.files[0];
+      if(!file) return alert('Select a file to upload.');
+      const allowed=['pdf','doc','docx']; const ext=(file.name.split('.').pop()||'').toLowerCase();
+      if(!allowed.includes(ext)){if(!confirm('Allowed: pdf, doc, docx. Do you still want to upload?')) return;}
+      uploadStatusEl.textContent='Uploading… please wait';
+      const safeSubject=sanitizeForFilename(subject||'Subject');
+      const safeFilename=`${Date.now()}__${sanitizeForFilename(file.name)}`;
+      const path=`${sanitizeForFilename(year)}__${safeSubject}__${safeFilename}`;
+      try{const { error }=await supabase.storage.from(BUCKET).upload(path,file,{upsert:false}); if(error) throw error;
+        uploadStatusEl.textContent='Upload successful ✔';
+        fileInput.value=''; document.getElementById('subject').value='';
+      }catch(err){uploadStatusEl.textContent=''; alert('Upload failed: '+(err.message||err));}
     }
-
-    async function signOut() {
-      await supabase.auth.signOut();
-      currentUser = null;
-      updateUI();
-    }
-
-    function updateUI() {
-      if (currentUser) {
-        authCard.style.display = 'none';
-        uploadCard.style.display = 'block';
-        sessionCard.style.display = 'block';
-        userEmailEl.textContent = currentUser.email;
-        userIdEl.textContent = `UID: ${currentUser.id}`;
-        if (ADMINS.includes(currentUser.email.toLowerCase())) {
-          adminCard.style.display = 'block';
-        } else {
-          adminCard.style.display = 'none';
-        }
-      } else {
-        authCard.style.display = 'block';
-        uploadCard.style.display = 'none';
-        adminCard.style.display = 'none';
-        sessionCard.style.display = 'none';
-      }
-    }
-
-    function sanitizeForFilename(s) {
-      return (s || 'unknown').replace(/\s+/g, '_').replace(/[^\w\-.]/g, '');
-    }
-
-    async function uploadFile() {
-      if (!currentUser) return alert('Please sign in first.');
-      const year = document.getElementById('year').value;
-      const subject = document.getElementById('subject').value.trim();
-      const fileInput = document.getElementById('file');
-      const file = fileInput.files[0];
-      if (!file) return alert('Select a file to upload.');
-      const allowed = ['pdf','doc','docx'];
-      const ext = (file.name.split('.').pop() || '').toLowerCase();
-      if (!allowed.includes(ext)) {
-        const ok = confirm('Allowed: pdf, doc, docx. Do you still want to upload?');
-        if (!ok) return;
-      }
-      uploadStatusEl.textContent = 'Uploading… please wait';
-      const safeSubject = sanitizeForFilename(subject || 'Subject');
-      const safeFilename = `${Date.now()}__${sanitizeForFilename(file.name)}`;
-      const path = `${sanitizeForFilename(year)}__${safeSubject}__${safeFilename}`;
-      try {
-        const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
-        if (error) throw error;
-        uploadStatusEl.textContent = 'Upload successful ✔';
-        fileInput.value = '';
-        document.getElementById('subject').value = '';
-      } catch (err) {
-        uploadStatusEl.textContent = '';
-        alert('Upload failed: ' + (err.message || err));
-      }
-    }
-
-    async function listFiles() {
-      fileListEl.innerHTML = '<li class="muted">Loading…</li>';
-      try {
-        const { data, error } = await supabase.storage.from(BUCKET).list('', { limit: 200 });
-        if (error) throw error;
-        if (!data || data.length === 0) {
-          fileListEl.innerHTML = '<li class="muted">No files found</li>';
-          return;
-        }
-        fileListEl.innerHTML = '';
-        data.forEach(f => {
-          const li = document.createElement('li');
-          const nameSpan = document.createElement('span');
-          nameSpan.textContent = f.name;
-          li.appendChild(nameSpan);
-          const btns = document.createElement('div');
-          const publicRes = supabase.storage.from(BUCKET).getPublicUrl(f.name);
-          const publicUrl = publicRes?.data?.publicUrl || null;
-          const a = document.createElement('a');
-          a.href = publicUrl || '#';
-          a.target = '_blank';
-          a.className = 'link';
-          a.textContent = 'Download';
-          a.onclick = (ev) => {
-            if (!publicUrl) {
-              ev.preventDefault();
-              alert('No public URL: make the bucket public in Supabase Storage settings.');
-            }
-          };
+    async function listFiles(){
+      fileListEl.innerHTML='<li class="muted">Loading…</li>';
+      try{
+        const { data,error }=await supabase.storage.from(BUCKET).list('',{limit:200}); if(error) throw error;
+        if(!data || data.length===0){fileListEl.innerHTML='<li class="muted">No files found</li>'; return;}
+        fileListEl.innerHTML='';
+        data.forEach(f=>{
+          const li=document.createElement('li'); const nameSpan=document.createElement('span'); nameSpan.textContent=f.name; li.appendChild(nameSpan);
+          const btns=document.createElement('div');
+          const publicRes=supabase.storage.from(BUCKET).getPublicUrl(f.name); const publicUrl=publicRes?.data?.publicUrl||null;
+          const a=document.createElement('a'); a.href=publicUrl||'#'; a.target='_blank'; a.className='link'; a.textContent='Download';
+          a.onclick=ev=>{if(!publicUrl){ev.preventDefault(); alert('No public URL: make the bucket public in Supabase Storage settings or implement signed-URL server-side.');}};
           btns.appendChild(a);
-          const rm = document.createElement('button');
-          rm.style.marginLeft = '8px';
-          rm.textContent = 'Delete';
-          rm.onclick = async () => {
-            if (!confirm('Delete file permanently?')) return;
-            const { error } = await supabase.storage.from(BUCKET).remove([f.name]);
-            if (error) return alert('Delete error: ' + error.message);
-            listFiles();
-          };
-          btns.appendChild(rm);
-          li.appendChild(btns);
-          fileListEl.appendChild(li);
+          const rm=document.createElement('button'); rm.style.marginLeft='8px'; rm.textContent='Delete';
+          rm.onclick=async()=>{if(!confirm('Delete file permanently?')) return; const { error }=await supabase.storage.from(BUCKET).remove([f.name]); if(error) return alert('Delete error: '+error.message); listFiles();};
+          btns.appendChild(rm); li.appendChild(btns); fileListEl.appendChild(li);
         });
-      } catch (err) {
-        fileListEl.innerHTML = '';
-        alert('List files error: ' + (err.message || err));
-      }
+      }catch(err){fileListEl.innerHTML=''; alert('List files error: '+(err.message||err));}
     }
 
-    window.signUp = signUp;
-    window.signIn = signIn;
-    window.signOut = signOut;
-    window.uploadFile = uploadFile;
-    window.listFiles = listFiles;
+    // Background shapes interaction
+    document.addEventListener('mousemove', e=>{
+      const x = e.clientX / window.innerWidth - 0.5;
+      const y = e.clientY / window.innerHeight - 0.5;
+      bgShapes.forEach((shape,i)=>{
+        const factor = (i+1)*15;
+        const scale = 1 + Math.sin(Date.now()/1000 + i) * 0.05;
+        const rotate = (Date.now()/50 + i*30) % 360;
+        shape.style.transform = `translate(${x*factor}px, ${y*factor}px) scale(${scale}) rotate(${rotate}deg)`;
+      });
+    });
+
+    window.signUp=signUp; window.signIn=signIn; window.signOut=signOut; window.uploadFile=uploadFile; window.listFiles=listFiles;
   </script>
 </body>
 </html>
